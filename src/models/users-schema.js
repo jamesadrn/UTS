@@ -4,4 +4,6 @@ const usersSchema = {
   password: String,
 };
 
-module.exports = usersSchema;
+module.exports = {
+  usersSchema,
+};

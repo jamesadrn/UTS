@@ -1,61 +1,21 @@
-// users-repository.js
 const { User } = require('../../../models');
 
 /**
  * Get a list of users
  * @returns {Promise}
  */
-async function getUsers() {
-  return User.find({});
-}
+async function getUsers(searchparams, sortparams, page_number, page_size) {
+  const count = await User.countDocuments(searchparams);
 
-async function getUsersByField(field, value, sortFieldName, sortOrder) {
-  let query = {};
+  const users = await User.find(searchparams)
+    .sort(sortparams)
+    .skip(page_number)
+    .limit(page_size);
 
-  // Atur nilai pengurutan jika 'asc' atau 'desc'
-  if (value === 'asc') {
-    value = 1;
-  } else if (value === 'desc') {
-    value = -1;
-  }
-
-  // Validasi field
-  if (field === 'name' || field === 'email') {
-    query[field] = value;
-  } else {
-    throw new Error('Invalid field');
-  }
-
-  // Panggil User.find dengan query yang telah dibuat
-  let users = await User.find(query);
-
-  // Nilai Default Sort
-  if (!sortFieldName || !sortOrder) {
-    sortFieldName = 'email';
-    sortOrder = 'asc';
-  }
-
-  // Jika ada kriteria pengurutan, lakukan pengurutan
-  if (sortFieldName && sortOrder) {
-    users = users.sort((a, b) => {
-      if (a[sortFieldName] < b[sortFieldName]) {
-        return sortOrder === 'asc' ? -1 : 1;
-      }
-      if (a[sortFieldName] > b[sortFieldName]) {
-        return sortOrder === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }
-
-  // Sederhanakan pembuatan objek hasil
-  const results = users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-  }));
-
-  return results;
+  return {
+    users,
+    count,
+  };
 }
 
 async function getUser(id) {
@@ -98,7 +58,6 @@ async function changePassword(id, password) {
 
 module.exports = {
   getUsers,
-  getUsersByField,
   getUser,
   createUser,
   updateUser,

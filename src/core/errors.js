@@ -124,6 +124,11 @@ const errorTypes = {
     status: 409,
     code: 'EMAIL_ALREADY_TAKEN_ERROR',
   },
+  PRODUCT_ALREADY_REGISTERED: {
+    description: 'This product is already registered',
+    status: 410,
+    code: 'PRODUCT_ALREADY_REGISTERED_ERROR',
+  },
   SEND_EMAIL: {
     description: 'Send email error',
     status: 500,

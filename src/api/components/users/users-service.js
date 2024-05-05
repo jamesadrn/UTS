@@ -1,13 +1,54 @@
 const usersRepository = require('./users-repository');
 const { hashPassword, passwordMatched } = require('../../../utils/password');
-const { getAllUsers } = require('./users-controller');
 
 /**
  * Get list of users
  * @returns {Array}
  */
-async function getUsers() {
-  const users = await usersRepository.getUsers();
+async function getUsers(
+  searchFieldName,
+  searchValue,
+  sortFieldName,
+  sortOrder,
+  page_number = 1,
+  page_size = 0
+) {
+  let searchparams = {};
+
+  if (
+    (searchFieldName === 'name' || searchFieldName === 'email') &&
+    searchValue
+  ) {
+    let searchRegex = new RegExp(searchValue, 'i');
+    searchparams[searchFieldName] = searchRegex;
+  }
+
+  if (!sortFieldName || !sortOrder) {
+    sortFieldName = 'email';
+    sortOrder = 'asc';
+  }
+
+  // Atur nilai pengurutan jika 'asc' atau 'desc'
+  if (sortOrder === 'asc') {
+    sortOrder = 1;
+  } else if (sortOrder === 'desc') {
+    sortOrder = -1;
+  }
+  let sortparams = {};
+  sortparams[sortFieldName] = sortOrder;
+
+  const { skip, limit } = getPageInfo(page_number, page_size);
+
+  const { users, count } = await usersRepository.getUsers(
+    searchparams,
+    sortparams,
+    skip,
+    limit
+  );
+
+  const total_pages = Math.ceil(count / page_size);
+  const has_previous_page = page_number <= total_pages && page_number > 1;
+  const has_next_page = page_number < total_pages && page_number !== 0;
 
   const results = [];
   for (let i = 0; i < users.length; i += 1) {
@@ -19,42 +60,26 @@ async function getUsers() {
     });
   }
 
-  return results;
+  console.log(users.length);
+
+  return {
+    page_number: page_number,
+    page_size: page_size,
+    count: count,
+    total_pages: total_pages,
+    has_previous_page: has_previous_page,
+    has_next_page: has_next_page,
+    data: results,
+  };
 }
 
-async function getUsersByField(field, value, sortFieldName, sortOrder) {
-  let users;
+//PAGINATION
+function getPageInfo(page_number, page_size) {
+  const skip = (page_number - 1) * page_size;
 
-  // Panggil repository untuk mendapatkan pengguna berdasarkan kriteria
-  users = await usersRepository.getUsersByField(field, value);
+  const limit = page_size;
 
-  // Nilai Default Sort
-  if (!sortFieldName || !sortOrder) {
-    sortFieldName = 'email';
-    sortOrder = 'asc';
-  }
-
-  // Jika ada kriteria pengurutan, lakukan pengurutan
-  if (sortFieldName && sortOrder) {
-    users.sort((a, b) => {
-      if (a[sortFieldName] < b[sortFieldName]) {
-        return sortOrder === 'asc' ? -1 : 1;
-      }
-      if (a[sortFieldName] > b[sortFieldName]) {
-        return sortOrder === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }
-
-  // Sederhanakan pembuatan objek hasil
-  const results = users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-  }));
-
-  return results;
+  return { skip, limit };
 }
 
 /**
@@ -148,6 +173,36 @@ async function emailIsRegistered(email) {
   return false;
 }
 
+async function getProducts() {
+  const products = await usersRepository.getProduct();
+
+  const results = [];
+  for (let i = 0; i < products.length; i += 1) {
+    const product = products[i];
+    results.push({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      description: product.description,
+    });
+  }
+
+  return results;
+}
+
+async function uploadProduct(product_name, product_price, product_description) {
+  try {
+    await usersRepository.uploadProduct(
+      product_name,
+      product_price,
+      product_description
+    );
+  } catch (err) {
+    return null;
+  }
+  return true;
+}
+
 /**
  * Check whether the password is correct
  * @param {string} userId - User ID
@@ -183,11 +238,12 @@ async function changePassword(id, password) {
 }
 
 module.exports = {
+  getProducts,
+  uploadProduct,
+  getPageInfo,
   emailIsRegistered,
   checkPassword,
   getUsers,
-  getAllUsers,
-  getUsersByField,
   getUser,
   createUser,
   updateUser,

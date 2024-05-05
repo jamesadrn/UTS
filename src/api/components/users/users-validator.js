@@ -3,6 +3,13 @@ const { joiPasswordExtendCore } = require('joi-password');
 const joiPassword = joi.extend(joiPasswordExtendCore);
 
 module.exports = {
+  uploadProduct: {
+    body: {
+      name: joi.string().min(1).max(100).required().label('Name'),
+      price: joi.string().min(1).max(100).required().label('Price'),
+      description: joi.string().min(1).max(100).required().label('Description'),
+    },
+  },
   createUser: {
     body: {
       name: joi.string().min(1).max(100).required().label('Name'),
@@ -22,14 +29,12 @@ module.exports = {
       password_confirm: joi.string().required().label('Password confirmation'),
     },
   },
-
   updateUser: {
     body: {
       name: joi.string().min(1).max(100).required().label('Name'),
       email: joi.string().email().required().label('Email'),
     },
   },
-
   changePassword: {
     body: {
       password_old: joi.string().required().label('Old password'),

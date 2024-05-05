@@ -10,37 +10,44 @@ const { errorResponder, errorTypes } = require('../../../core/errors');
  */
 
 //SEARCHING AND SORTING
-async function getUsers(fieldName, searchKey, sortFieldName, sortOrder) {
-  let users;
+async function getUsers(request, response, next) {
+  try {
+    const searchQuery = request.query.search;
+    const sortOption = request.query.sort;
+    const page_number = parseInt(request.query.page_number);
+    const page_size = parseInt(request.query.page_size);
+    let users;
+    let searchFieldName, searchValue, sortFieldName, sortOrder;
 
-  // Jika ada kriteria pencarian, panggil service untuk mendapatkan pengguna berdasarkan kriteria pencarian
-  if (fieldName && searchKey) {
-    users = await usersService.getUsersByField(fieldName, searchKey);
-  } else {
-    // Jika tidak ada kriteria pencarian, panggil service untuk mendapatkan semua pengguna
-    users = await usersService.getUsers();
-  }
-
-  // Jika ada kriteria pengurutan, lakukan pengurutan
-  if (sortFieldName && sortOrder) {
-    users.sort((a, b) => {
-      if (a[sortFieldName] < b[sortFieldName]) {
-        return sortOrder === 'asc' ? -1 : 1;
+    // SEARCHING AND SORTING
+    if (searchQuery || sortOption) {
+      // SEARCHING
+      if (searchQuery) {
+        [searchFieldName, searchValue] = searchQuery.split(':');
       }
-      if (a[sortFieldName] > b[sortFieldName]) {
-        return sortOrder === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }
 
-  return users;
+      // SORTING
+      if (sortOption) {
+        [sortFieldName, sortOrder] = sortOption.split(':');
+      }
+    }
+
+    // Panggil controller untuk mendapatkan pengguna berdasarkan kriteria pencarian dan pengurutan
+    users = await usersService.getUsers(
+      searchFieldName,
+      searchValue,
+      sortFieldName,
+      sortOrder,
+      page_number,
+      page_size
+    );
+    console.log(users);
+    return response.status(200).json(users);
+  } catch (error) {
+    return next(error);
+  }
 }
 
-async function getAllUsers() {
-  const users = await usersService.getUsers();
-  return users;
-}
 /**
  * Handle get user detail request
  * @param {object} request - Express request object
@@ -50,7 +57,7 @@ async function getAllUsers() {
  */
 async function getUser(request, response, next) {
   try {
-    const user = await usersService.getUser(request.params.id);
+    const user = await usersService.getUser(request.body.id);
 
     if (!user) {
       throw errorResponder(errorTypes.UNPROCESSABLE_ENTITY, 'Unknown user');
@@ -152,7 +159,7 @@ async function updateUser(request, response, next) {
  */
 async function deleteUser(request, response, next) {
   try {
-    const id = request.params.id;
+    const id = request.body.id;
 
     const success = await usersService.deleteUser(id);
     if (!success) {
@@ -188,7 +195,7 @@ async function changePassword(request, response, next) {
     // Check old password
     if (
       !(await usersService.checkPassword(
-        request.params.id,
+        request.body.id,
         request.body.password_old
       ))
     ) {
@@ -196,7 +203,7 @@ async function changePassword(request, response, next) {
     }
 
     const changeSuccess = await usersService.changePassword(
-      request.params.id,
+      request.body.id,
       request.body.password_new
     );
 
@@ -207,7 +214,7 @@ async function changePassword(request, response, next) {
       );
     }
 
-    return response.status(200).json({ id: request.params.id });
+    return response.status(200).json({ id: request.body.id });
   } catch (error) {
     return next(error);
   }
@@ -215,7 +222,6 @@ async function changePassword(request, response, next) {
 
 module.exports = {
   getUsers,
-  getAllUsers,
   getUser,
   createUser,
   updateUser,
